@@ -38,4 +38,123 @@ bar_chart("SibSp") # 형제, 자매와 함께 탑승했을 경우의 생존률
 bar_chart("Parch") # 가족과 함께 탑승했을 경우의 생존률
 
 bar_chart("Embarked") # 선착장에 따른 생존률
-# 
+
+# Feature Engineering 
+  # feature -> column
+  # Text를 컴퓨터가 이해할 수 있는 숫자로 변환해줘야 한다. 
+  # outlier or NaN 처리
+
+def countNullValue(data,feature):
+  target = data[feature].isnull().sum()
+  print(target)
+
+# def convertStrToNum(feature,data,mappingData):
+#   for dataset in data:
+#     dataset[feature] = dataset[feature].map(mappingData)
+#   print(data[feature])
+
+# Name
+train_test_data = [train, test] # combining train and test dataset
+
+for dataset in train_test_data:
+    dataset['Title'] = dataset['Name'].str.extract(' ([A-Za-z]+)\.', expand=False)
+ 
+ # train 테이블에서 이름 제거, 이때 이름에서 미혼,기혼 정보를 일 수 있기 때문에 이름을 따로 분류
+train["Title"].value_counts()
+
+# feature scaling
+# 승객의 이름 중 미혼, 기혼을 알 수 있는 정보를 숫자로 변형 후 테이블에 저장
+# 0:남성 1: 미혼여성 2: 기혼여성 3: 그외 이름
+title_mapping = {"Mr": 0, "Miss": 1, "Mrs": 2,
+"Master": 3, "Dr": 3, "Rev": 3, "Col": 3, "Major": 3, "Mlle": 3,"Countess": 3,
+"Ms": 3, "Lady": 3, "Jonkheer": 3, "Don": 3, "Dona" : 3, "Mme": 3,"Capt": 3,"Sir": 3 }
+
+for dataset in train_test_data:
+  dataset['Title'] = dataset['Title'].map(title_mapping)
+train["Title"].value_counts()
+#convertStrToNum("Title",train_test_data,title_mapping)
+train.head()
+
+# 이름을 이용해 나타낸 생존률
+bar_chart("Title")
+
+# 이름 데이터 삭제
+train.drop('Name', axis=1, inplace=True) 
+test.drop('Name', axis=1, inplace=True)
+
+# Sex
+countNullValue(train,"Sex")
+
+sex_mapping = {"male":0, "female":1}
+
+for dataset in train_test_data:
+  dataset["Sex"] = dataset["Sex"].map(sex_mapping)
+train.head()
+bar_chart("Sex")
+
+# Age
+
+countNullValue(train,"Age")
+# 나이는 10대,20대 처럼 군집분류
+# missing value는 이름을 통해 분류한 성별의 평균으로 값을 채운다.
+train["Age"].fillna(train.groupby("Title")["Age"].transform("median"), inplace=True) 
+test["Age"].fillna(test.groupby("Title")["Age"].transform("median"), inplace=True)
+train.groupby("Title")["Age"].transform("median")
+# missing value 개수 0 확인
+countNullValue(train,"Age")
+
+# 나이에 따른 생존율 차트 확인
+# 전체
+# 차트를 통해서 알 수 있는 것은 20~30대가 가장 많이 생존한 것을 확인할 수 있다.
+facet = sns.FacetGrid(train, hue="Survived",aspect=4) 
+facet.map(sns.kdeplot,'Age',shade= True) 
+facet.set(xlim=(0, train['Age'].max())) 
+facet.add_legend()
+plt.show()
+
+
+# 0~20대
+facet = sns.FacetGrid(train, hue="Survived",aspect=4) 
+facet.map(sns.kdeplot,'Age',shade= True) 
+facet.set(xlim=(0, train['Age'].max())) 
+facet.add_legend()
+plt.xlim(0, 20)
+plt.show()
+
+# 30~40대
+facet = sns.FacetGrid(train, hue="Survived",aspect=4) 
+facet.map(sns.kdeplot,'Age',shade= True) 
+facet.set(xlim=(0, train['Age'].max())) 
+facet.add_legend()
+plt.xlim(30, 40)
+plt.show()
+
+# 40~60대
+facet = sns.FacetGrid(train, hue="Survived",aspect=4) 
+facet.map(sns.kdeplot,'Age',shade= True) 
+facet.set(xlim=(0, train['Age'].max())) 
+facet.add_legend()
+plt.xlim(40, 60)
+plt.show()
+
+# 60~80대
+facet = sns.FacetGrid(train, hue="Survived",aspect=4) 
+facet.map(sns.kdeplot,'Age',shade= True) 
+facet.set(xlim=(0, train['Age'].max())) 
+facet.add_legend()
+plt.xlim(60, 80)
+plt.show()
+
+# 연령대별 그룹화
+# child: 0 | young: 1 | adult: 2 | mid-age: 3 | senior: 4
+
+test.info()
+train.info()
+for dataset in train_test_data:
+  dataset.loc[ dataset['Age'] <= 16, 'Age'] = 0,
+  dataset.loc[(dataset['Age'] > 16) & (dataset['Age'] <= 26), 'Age'] = 1,
+  dataset.loc[(dataset['Age'] > 26) & (dataset['Age'] <= 36), 'Age'] = 2,
+  dataset.loc[(dataset['Age'] > 36) & (dataset['Age'] <= 62), 'Age'] = 3,
+  dataset.loc[ dataset['Age'] > 62, 'Age'] = 4
+
+train["Age"]

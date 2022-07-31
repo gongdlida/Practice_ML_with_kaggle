@@ -185,10 +185,12 @@ for dataset in train_test_data:
   dataset.Embarked = dataset.Embarked.map(embarked_mapping)
 
 # Fare
-testMissingValue = test[test.Fare.isnull() == True] # Test 데이터에서 Fare와 Cabin이 missing value인 인원의 티켓 등급과 항구 정보를 통해 평균값 적용
-test.Ticket
-fareMedian = test[(test.Pclass == 3) & (test.Embarked == 0)&(test.Age == 3)].Fare.median()
-testMissingValue.Fare = fareMedian
+# testMissingValue = test[test.Fare.isnull() == True] # Test 데이터에서 Fare와 Cabin이 missing value인 인원의 티켓 등급과 항구 정보를 통해 평균값 적용
+# fareMedian = test[(test.Pclass == 3) & (test.Embarked == 0)&(test.Age == 3)].Fare.median()
+# testMissingValue.Fare = fareMedian
+train["Fare"].fillna(train.groupby("Pclass")["Fare"].transform("median"), inplace=True)
+test["Fare"].fillna(test.groupby("Pclass")["Fare"].transform("median"), inplace=True)
+
 
 countMissingValue(train,"Fare")
 #가격과 생존률 관계
@@ -221,7 +223,6 @@ for dataset in train_test_data:
 # Cabin의 missing value는 Fare 평균을 이용해 추측
 train.Cabin.value_counts()
 
-# ??
 for dataset in train_test_data:
     dataset['Cabin'] = dataset['Cabin'].str[:1]
 
@@ -256,5 +257,68 @@ features_drop = ['Ticket', 'SibSp', 'Parch'] # 불필요 데이터 제거
 train = train.drop(features_drop, axis=1)
 test = test.drop(features_drop, axis=1)
 train = train.drop(['PassengerId'], axis=1)
+
 train_data = train.drop('Survived', axis=1)
 target = train['Survived']
+
+#Modeling
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+import numpy as np
+
+#Cross Validation (K-fold)
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+k_fold = KFold(n_splits=10, shuffle=True, random_state=0)
+
+
+#kNN Algorithm
+knn = KNeighborsClassifier(n_neighbors = 13)
+scoring = 'accuracy'
+score = cross_val_score(knn, train_data, target, cv=k_fold, n_jobs=1, scoring=scoring)
+round(np.mean(score)*100, 2)
+#Decision Tree Algorithm
+dta = DecisionTreeClassifier()
+scoring = 'accuracy'
+score = cross_val_score(dta, train_data, target, cv=k_fold, n_jobs=1, scoring=scoring)
+print(score)
+round(np.mean(score)*100, 2)
+#Random Tree Algorithm
+rta = RandomForestClassifier(n_estimators=13)
+scoring = 'accuracy'
+score = cross_val_score(rta, train_data, target, cv=k_fold, n_jobs=1, scoring=scoring)
+print(score)
+round(np.mean(score)*100, 2)
+#Naive Bayes
+nb = GaussianNB()
+scoring = 'accuracy'
+score = cross_val_score(nb, train_data, target, cv=k_fold, n_jobs=1, scoring=scoring)
+print(score)
+round(np.mean(score)*100, 2)
+#SVM
+svm = SVC()
+scoring = 'accuracy'
+score = cross_val_score(svm, train_data, target, cv=k_fold, n_jobs=1, scoring=scoring)
+print(score)
+round(np.mean(score)*100,2)
+
+#Result
+#결과값은 모든 값들 중 가장 수치가 높은 값을 기준으로 결과 도출
+res = SVC()
+res.fit(train_data, target)
+
+test_data = test.drop("PassengerId", axis=1).copy()
+
+res.predict(test_data)
+prediction = res.predict(test_data)
+
+submission = pd.DataFrame({
+        "PassengerId": test["PassengerId"],
+        "Survived": prediction
+    })
+
+submission.to_csv('submission.csv', index=False)
+submission = pd.read_csv('submission.csv')

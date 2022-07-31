@@ -44,7 +44,7 @@ bar_chart("Embarked") # 선착장에 따른 생존률
   # Text를 컴퓨터가 이해할 수 있는 숫자로 변환해줘야 한다. 
   # outlier or NaN 처리
 
-def countNullValue(data,feature):
+def countMissingValue(data,feature):
   target = data[feature].isnull().sum()
   print(target)
 
@@ -58,7 +58,7 @@ train_test_data = [train, test] # combining train and test dataset
 
 for dataset in train_test_data:
     dataset['Title'] = dataset['Name'].str.extract(' ([A-Za-z]+)\.', expand=False)
- 
+
  # train 테이블에서 이름 제거, 이때 이름에서 미혼,기혼 정보를 일 수 있기 때문에 이름을 따로 분류
 train["Title"].value_counts()
 
@@ -83,7 +83,7 @@ train.drop('Name', axis=1, inplace=True)
 test.drop('Name', axis=1, inplace=True)
 
 # Sex
-countNullValue(train,"Sex")
+countMissingValue(train,"Sex")
 
 sex_mapping = {"male":0, "female":1}
 
@@ -94,14 +94,14 @@ bar_chart("Sex")
 
 # Age
 
-countNullValue(train,"Age")
+countMissingValue(train,"Age")
 # 나이는 10대,20대 처럼 군집분류
 # missing value는 이름을 통해 분류한 성별의 평균으로 값을 채운다.
 train["Age"].fillna(train.groupby("Title")["Age"].transform("median"), inplace=True) 
 test["Age"].fillna(test.groupby("Title")["Age"].transform("median"), inplace=True)
 train.groupby("Title")["Age"].transform("median")
 # missing value 개수 0 확인
-countNullValue(train,"Age")
+countMissingValue(train,"Age")
 
 # 나이에 따른 생존율 차트 확인
 # 전체
@@ -148,13 +148,74 @@ plt.show()
 # 연령대별 그룹화
 # child: 0 | young: 1 | adult: 2 | mid-age: 3 | senior: 4
 
-test.info()
-train.info()
-for dataset in train_test_data:
-  dataset.loc[ dataset['Age'] <= 16, 'Age'] = 0,
-  dataset.loc[(dataset['Age'] > 16) & (dataset['Age'] <= 26), 'Age'] = 1,
-  dataset.loc[(dataset['Age'] > 26) & (dataset['Age'] <= 36), 'Age'] = 2,
-  dataset.loc[(dataset['Age'] > 36) & (dataset['Age'] <= 62), 'Age'] = 3,
-  dataset.loc[ dataset['Age'] > 62, 'Age'] = 4
+for dataset in train_test_data: # 이렇게 반복문으로 돌리면 에러가 출력됌, 하나씩 순회해서 수정해야함
+  dataset.loc[ dataset['Age'] <= 16, 'Age'] = 0
+for dataset in train_test_data:  
+  dataset.loc[(dataset['Age'] > 16) & (dataset['Age'] <= 26), 'Age'] = 1
+for dataset in train_test_data:  
+  dataset.loc[(dataset['Age'] > 26) & (dataset['Age'] <= 36), 'Age'] = 2
+for dataset in train_test_data:  
+  dataset.loc[(dataset['Age'] > 36) & (dataset['Age'] <= 62), 'Age'] = 3
+for dataset in train_test_data:  
+  dataset.loc[ dataset['Age'] > 62, 'Age'] = 4  
 
-train["Age"]
+#Embarked
+# Emarked의 missing value: 2명 => 가장 많이 탑승한 곳으로 모두 세팅
+train.Pclass.value_counts()
+train.Embarked.value_counts()
+
+Pclass1 = train[train['Pclass']==1]['Embarked'].value_counts() 
+Pclass2 = train[train['Pclass']==2]['Embarked'].value_counts() 
+Pclass3 = train[train['Pclass']==3]['Embarked'].value_counts()
+
+df = pd.DataFrame([Pclass1, Pclass2, Pclass3])
+df.index = ['1st class','2nd class', '3rd class'] 
+df.plot(kind='bar',stacked=True, figsize=(10,5))
+plt.show() 
+
+train.Embarked.value_counts()
+train.info()
+# 탑승객의 S 항구에서 
+for dataset in train_test_data:
+ dataset['Embarked'] = dataset['Embarked'].fillna('S')
+ 
+embarked_mapping = {"S":0,"C":1,"Q":2}
+
+for dataset in train_test_data:
+  dataset.Embarked = dataset.Embarked.map(embarked_mapping)
+
+# Fare
+testMissingValue = test[test.Fare.isnull() == True] # Test 데이터에서 Fare와 Cabin이 missing value인 인원의 티켓 등급과 항구 정보를 통해 평균값 적용
+test.Ticket
+fareMedian = test[(test.Pclass == 3) & (test.Embarked == 0)&(test.Age == 3)].Fare.median()
+testMissingValue.Fare = fareMedian
+
+countMissingValue(train,"Fare")
+#가격과 생존률 관계
+def targetChart(target,fr=0,to=0):
+ facet = sns.FacetGrid(train, h1ue="Survived",aspect=4) 
+ facet.map(sns.kdeplot,target,shade= True) 
+ facet.set(xlim=(0, train[target].max())) 
+ facet.add_legend()
+ if(to !=0):
+  plt.xlim(fr,to)
+  plt.show()
+  return
+ plt.show()
+
+
+targetChart("Fare",0,20)
+targetChart("Fare",0,30)
+targetChart("Fare")
+
+for dataset in train_test_data:
+    dataset.loc[ dataset['Fare'] <= 17, 'Fare'] = 0
+for dataset in train_test_data:    
+    dataset.loc[(dataset['Fare'] > 17) & (dataset['Fare'] <= 30), 'Fare'] = 1
+for dataset in train_test_data:
+    dataset.loc[(dataset['Fare'] > 30) & (dataset['Fare'] <= 100), 'Fare'] = 2
+for dataset in train_test_data:    
+    dataset.loc[ dataset['Fare'] > 100, 'Fare'] = 3
+
+#Cabin
+# Cabin의 missing value는 Fare 평균을 이용해 추측

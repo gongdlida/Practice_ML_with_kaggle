@@ -219,3 +219,42 @@ for dataset in train_test_data:
 
 #Cabin
 # Cabin의 missing value는 Fare 평균을 이용해 추측
+train.Cabin.value_counts()
+
+# ??
+for dataset in train_test_data:
+    dataset['Cabin'] = dataset['Cabin'].str[:1]
+
+Pclass1 = train[train['Pclass']==1]['Cabin'].value_counts()
+Pclass2 = train[train['Pclass']==2]['Cabin'].value_counts()
+Pclass3 = train[train['Pclass']==3]['Cabin'].value_counts()
+df = pd.DataFrame([Pclass1, Pclass2, Pclass3])
+df.index = ['1st class','2nd class', '3rd class']
+df.plot(kind='bar',stacked=True, figsize=(10,5))
+plt.show()
+
+cabin_mapping = {"A": 0, "B": 0.4, "C": 0.8, "D": 1.2, "E": 1.6, "F": 2, "G": 2.4, "T": 2.8}
+for dataset in train_test_data:
+    dataset['Cabin'] = dataset['Cabin'].map(cabin_mapping)
+
+countMissingValue(train, "Cabin")
+# fill missing Fare with median fare for each Pclass
+train["Cabin"].fillna(train.groupby("Pclass")["Cabin"].transform("median"), inplace=True)
+test["Cabin"].fillna(test.groupby("Pclass")["Cabin"].transform("median"), inplace=True)
+countMissingValue(train, "Cabin")
+
+# SibSp와 Parch 항목을 Family Size 항목으로 묶어 추가 -> 동승자가 있을 경우의 생존율
+# 동승자가 없을 경우 1, 그외 2이상의 값을 갖는다.
+train["FamilySize"] = train["SibSp"] + train["Parch"] + 1
+test["FamilySize"] = test["SibSp"] + test["Parch"] + 1
+
+family_mapping = {1: 0, 2: 0.4, 3: 0.8, 4: 1.2, 5: 1.6, 6: 2, 7: 2.4, 8: 2.8, 9: 3.2, 10: 3.6, 11: 4}
+for dataset in train_test_data:
+    dataset['FamilySize'] = dataset['FamilySize'].map(family_mapping)
+
+features_drop = ['Ticket', 'SibSp', 'Parch'] # 불필요 데이터 제거
+train = train.drop(features_drop, axis=1)
+test = test.drop(features_drop, axis=1)
+train = train.drop(['PassengerId'], axis=1)
+train_data = train.drop('Survived', axis=1)
+target = train['Survived']

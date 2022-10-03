@@ -2,8 +2,8 @@ import pandas as pd #pandas 라이브러리에 대해서 간단하게 정리
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-train = pd.read_csv("Titanic/input/train.csv")
-test = pd.read_csv("Titanic/input/test.csv")
+train = pd.read_csv("../datasets/titanic_datasets/input/train.csv")
+test = pd.read_csv("../datasets/titanic_datasets/input/test.csv")
 
 # Data meaning
   # Survived  | 0 = No, 1 = Yes
